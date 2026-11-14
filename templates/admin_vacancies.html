@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Admin: moderation{% endblock %}
+{% block content %}
+{% set messages = {
+  "approved": "Vacancy published.",
+  "rejected": "Vacancy rejected. The employer will see the reason.",
+  "reason_required": "Please write a reason for the rejection.",
+  "no_required": "The vacancy has no required skills, so it cannot be published.",
+  "past_deadline": "The deadline of this vacancy is in the past. Reject it with a reason or ask the employer to change the date."} %}
+
+<h1 class="h3 mb-1">Vacancy moderation</h1>
+<p class="text-muted">Vacancies waiting for review. A rejection always needs a reason.</p>
+
+{% if msg in messages %}<div class="alert alert-info">{{ messages[msg] }}</div>{% endif %}
+{% if not vacancies %}<div class="alert alert-secondary">No vacancies are waiting for review.</div>{% endif %}
+
+{% for v in vacancies %}
+<div class="card shadow-sm mb-3">
+  <div class="card-body">
+    <h2 class="h5 mb-1">{{ v.title }}</h2>
+    <div class="text-muted small mb-2">
+      {{ v.company }} · {{ v.direction }} · {{ v.level }} · {{ v.work_format }} · {{ v.city or 'no city' }}
+      {% if v.deadline %}· deadline {{ v.deadline }}{% endif %}
+      · {% if v.paid %}paid{% if v.salary_min or v.salary_max %} ({{ v.salary_min or '?' }}–{{ v.salary_max or '?' }} {{ v.currency }}/{{ v.salary_period }}){% endif %}{% else %}unpaid{% endif %}
+    </div>
+    <p class="mb-2">{{ v.description }}</p>
+    <p class="mb-3">
+      {% for s in v.skills if s.is_required %}<span class="badge text-bg-dark">{{ s.skill.name }}</span> {% endfor %}
+      {% for s in v.skills if not s.is_required %}<span class="badge text-bg-light border">{{ s.skill.name }}</span> {% endfor %}
+    </p>
+    <div class="d-flex flex-wrap gap-2 align-items-start">
+      <form method="post" action="/admin/vacancy/{{ v.id }}/approve">
+        <button class="btn btn-success btn-sm" type="submit">Publish</button>
+      </form>
+      <form method="post" action="/admin/vacancy/{{ v.id }}/reject" class="d-flex gap-2 flex-grow-1">
+        <input class="form-control form-control-sm" name="reason" placeholder="Reason for rejection" maxlength="1000" required>
+        <button class="btn btn-outline-danger btn-sm" type="submit">Reject</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endfor %}
+{% endblock %}

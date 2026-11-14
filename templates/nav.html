@@ -9,7 +9,9 @@
           <a class="btn btn-outline-light btn-sm" href="/employer/company">Company</a>
           <span class="navbar-text text-white small">{{ request.session.get('user_name') }}</span>
         {% elif role == 'admin' %}
-          <span class="navbar-text text-white small">Admin: {{ request.session.get('user_name') }}</span>
+          <a class="btn btn-light btn-sm" href="/admin">Companies</a>
+          <a class="btn btn-outline-light btn-sm" href="/admin/vacancies">Moderation</a>
+          <span class="navbar-text text-white small">Admin</span>
         {% else %}
           <a class="btn btn-light btn-sm" href="/recommendations">Recommendations</a>
           <a class="btn btn-outline-light btn-sm" href="/favorites">Saved</a>

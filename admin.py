@@ -1,5 +1,8 @@
-from fastapi import APIRouter, HTTPException, Request
+from datetime import date, datetime
+
+from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import RedirectResponse
+
 from fastapi.templating import Jinja2Templates
 
 from database import EmployerProfile, ModerationLog, SessionLocal, User, Vacancy
@@ -70,3 +73,67 @@ def verify_company(request: Request, company_id: int):
 @router.post("/admin/company/{company_id}/unverify")
 def unverify_company(request: Request, company_id: int):
     return set_verified(request, company_id, False)
+
+@router.get("/admin/vacancies")
+def admin_vacancies(request: Request, msg: str = ""):
+    db = SessionLocal()
+    try:
+        admin = get_admin(request, db)
+        if not admin:
+            return RedirectResponse("/login", status_code=303)
+        pending = db.query(Vacancy).filter_by(status="pending").order_by(Vacancy.id).all()
+        return templates.TemplateResponse(request, "admin_vacancies.html",
+                                          {"vacancies": pending, "msg": msg})
+    finally:
+        db.close()
+
+
+@router.post("/admin/vacancy/{vacancy_id}/approve")
+def approve_vacancy(request: Request, vacancy_id: int):
+    db = SessionLocal()
+    try:
+        admin = get_admin(request, db)
+        if not admin:
+            return RedirectResponse("/login", status_code=303)
+        vacancy = db.get(Vacancy, vacancy_id)
+        if not vacancy:
+            raise HTTPException(status_code=404, detail="Vacancy not found")
+        if vacancy.status != "pending":
+            return RedirectResponse("/admin/vacancies", status_code=303)
+        if not any(vs.is_required for vs in vacancy.skills):
+            return RedirectResponse("/admin/vacancies?msg=no_required", status_code=303)
+        if vacancy.deadline and vacancy.deadline < date.today():
+            return RedirectResponse("/admin/vacancies?msg=past_deadline", status_code=303)
+        vacancy.status = "published"
+        if not vacancy.published_at:  # keep the date of the first publication
+            vacancy.published_at = datetime.utcnow()
+        vacancy.rejection_reason = None
+        log_action(db, admin, "approve_vacancy", "vacancy", vacancy.id)
+        db.commit()
+        return RedirectResponse("/admin/vacancies?msg=approved", status_code=303)
+    finally:
+        db.close()
+
+
+@router.post("/admin/vacancy/{vacancy_id}/reject")
+def reject_vacancy(request: Request, vacancy_id: int, reason: str = Form("")):
+    db = SessionLocal()
+    try:
+        admin = get_admin(request, db)
+        if not admin:
+            return RedirectResponse("/login", status_code=303)
+        vacancy = db.get(Vacancy, vacancy_id)
+        if not vacancy:
+            raise HTTPException(status_code=404, detail="Vacancy not found")
+        if vacancy.status != "pending":
+            return RedirectResponse("/admin/vacancies", status_code=303)
+        reason = reason.strip()
+        if not reason:
+            return RedirectResponse("/admin/vacancies?msg=reason_required", status_code=303)
+        vacancy.status = "rejected"
+        vacancy.rejection_reason = reason[:1000]
+        log_action(db, admin, "reject_vacancy", "vacancy", vacancy.id, reason[:1000])
+        db.commit()
+        return RedirectResponse("/admin/vacancies?msg=rejected", status_code=303)
+    finally:
+        db.close()
