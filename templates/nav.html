@@ -1,0 +1,14 @@
+<nav class="navbar navbar-dark bg-primary mb-4">
+  <div class="container">
+    <a class="navbar-brand fw-bold" href="/">AITU Career Match</a>
+    <div class="d-flex gap-2">
+      {% if request.session.get('user_id') %}
+        <a class="btn btn-outline-light btn-sm" href="/profile">{{ request.session.get('user_name') }}</a>
+        <a class="btn btn-light btn-sm" href="/logout">Log out</a>
+      {% else %}
+        <a class="btn btn-outline-light btn-sm" href="/login">Log in</a>
+        <a class="btn btn-light btn-sm" href="/register">Sign up</a>
+      {% endif %}
+    </div>
+  </div>
+</nav>

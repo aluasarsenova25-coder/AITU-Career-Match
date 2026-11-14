@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Log in{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-5">
+    <h1 class="h3 mb-3">Log in</h1>
+    {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+    <form method="post" action="/login" class="card card-body shadow-sm">
+      <input class="form-control mb-2" type="email" name="email" placeholder="Email" value="{{ email or '' }}" required>
+      <input class="form-control mb-3" type="password" name="password" placeholder="Password" required>
+      <button class="btn btn-primary" type="submit">Log in</button>
+      <p class="small text-muted mt-3 mb-0">No account yet? <a href="/register">Sign up</a></p>
+    </form>
+  </div>
+</div>
+{% endblock %}
