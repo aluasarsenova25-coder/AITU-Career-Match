@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Admin: companies{% endblock %}
+{% block content %}
+<h1 class="h3 mb-1">Employer companies</h1>
+<p class="text-muted">Verify companies so they can publish vacancies. Unverified companies can only keep drafts.</p>
+
+{% if not rows %}<div class="alert alert-info">No employer companies yet.</div>{% endif %}
+
+{% for r in rows %}
+<div class="card shadow-sm mb-3">
+  <div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>
+      <h2 class="h5 mb-1">{{ r.company.company_name }}
+        {% if r.company.verified %}<span class="badge text-bg-success">Verified</span>
+        {% else %}<span class="badge text-bg-warning">Not verified</span>{% endif %}
+      </h2>
+      <div class="text-muted small">
+        {{ r.email }} · contact: {{ r.company.contact_name or '—' }}
+        {% if r.company.website %}· <a href="{{ r.company.website }}" rel="noopener noreferrer" target="_blank">website</a>{% endif %}
+        · vacancies: {{ r.vacancy_count }}
+      </div>
+      {% if r.company.description %}<div class="small mt-1">{{ r.company.description }}</div>{% endif %}
+    </div>
+    <div>
+      {% if r.company.verified %}
+        <form method="post" action="/admin/company/{{ r.company.id }}/unverify">
+          <button class="btn btn-outline-danger btn-sm" type="submit">Revoke verification</button>
+        </form>
+      {% else %}
+        <form method="post" action="/admin/company/{{ r.company.id }}/verify">
+          <button class="btn btn-success btn-sm" type="submit">Verify company</button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endfor %}
+{% endblock %}
