@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}{{ heading }}{% endblock %}
+{% block content %}
+<a href="/employer" class="small">← Back to my vacancies</a>
+<h1 class="h3 mt-2 mb-3">{{ heading }}</h1>
+{% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+
+<form method="post" action="{{ action }}" class="card card-body shadow-sm mb-4">
+  <div class="row g-3 mb-3">
+    <div class="col-md-8">
+      <label class="form-label">Position title</label>
+      <input class="form-control" name="title" value="{{ data.title }}" required>
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">Application deadline</label>
+      <input class="form-control" type="date" name="deadline" value="{{ data.deadline }}">
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Direction</label>
+      <select class="form-select" name="direction" required>
+        <option value="">Select...</option>
+        {% for d in directions %}<option value="{{ d }}" {% if d == data.direction %}selected{% endif %}>{{ d }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Level</label>
+      <select class="form-select" name="level" required>
+        <option value="">Select...</option>
+        {% for x in levels %}<option value="{{ x }}" {% if x == data.level %}selected{% endif %}>{{ x }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Work format</label>
+      <select class="form-select" name="work_format" required>
+        <option value="">Select...</option>
+        {% for x in formats %}<option value="{{ x }}" {% if x == data.work_format %}selected{% endif %}>{{ x }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Employment type</label>
+      <select class="form-select" name="employment_type" required>
+        <option value="">Select...</option>
+        {% for x in employment_types %}<option value="{{ x }}" {% if x == data.employment_type %}selected{% endif %}>{{ x }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">City</label>
+      <input class="form-control" name="city" value="{{ data.city }}" placeholder="Astana (empty for Remote)">
+    </div>
+  </div>
+
+  <div class="form-check mb-2">
+    <input class="form-check-input" type="checkbox" name="paid" value="1" id="paid" {% if data.paid %}checked{% endif %}>
+    <label class="form-check-label" for="paid">This position is paid (unpaid internships are marked clearly)</label>
+  </div>
+  <div class="row g-2 mb-3">
+    <div class="col-md-3"><input class="form-control" name="salary_min" value="{{ data.salary_min }}" placeholder="Salary from (optional)"></div>
+    <div class="col-md-3"><input class="form-control" name="salary_max" value="{{ data.salary_max }}" placeholder="Salary to (optional)"></div>
+    <div class="col-md-3">
+      <select class="form-select" name="currency">
+        {% for x in currencies %}<option value="{{ x }}" {% if x == data.currency %}selected{% endif %}>{{ x }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3">
+      <select class="form-select" name="salary_period">
+        {% for x in periods %}<option value="{{ x }}" {% if x == data.salary_period %}selected{% endif %}>per {{ x }}</option>{% endfor %}
+      </select>
+    </div>
+  </div>
+
+  <label class="form-label">Description of tasks</label>
+  <textarea class="form-control mb-3" name="description" rows="5" required>{{ data.description }}</textarea>
+
+  <div class="row mb-3">
+    <div class="col-md-6">
+      <label class="form-label fw-bold">Required skills (at least one to publish)</label>
+      <div class="row">
+        {% for s in skills %}
+        <div class="col-6">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="required_ids" value="{{ s.id }}" id="r{{ s.id }}" {% if s.id in data.req_ids %}checked{% endif %}>
+            <label class="form-check-label" for="r{{ s.id }}">{{ s.name }}</label>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="col-md-6">
+      <label class="form-label fw-bold">Nice-to-have skills</label>
+      <div class="row">
+        {% for s in skills %}
+        <div class="col-6">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="optional_ids" value="{{ s.id }}" id="o{{ s.id }}" {% if s.id in data.opt_ids %}checked{% endif %}>
+            <label class="form-check-label" for="o{{ s.id }}">{{ s.name }}</label>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <button class="btn btn-primary" type="submit">Save</button>
+  <p class="small text-muted mt-2 mb-0">Saving keeps a new vacancy as a draft. Submit it for review from the vacancy list.</p>
+</form>
+{% endblock %}

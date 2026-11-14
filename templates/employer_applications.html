@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Applications{% endblock %}
+{% block content %}
+{% set colors = {"sent": "primary", "under_review": "info", "interview": "success", "rejected": "danger", "withdrawn": "secondary"} %}
+<a href="/employer" class="small">← Back to my vacancies</a>
+<h1 class="h3 mt-2 mb-1">Applications</h1>
+<p class="text-muted">{{ vacancy.title }}. You see candidate data only because they applied to this vacancy.</p>
+
+{% if not rows %}<div class="alert alert-info">No applications yet.</div>{% endif %}
+{% for r in rows %}
+<div class="card shadow-sm mb-3">
+  <div class="card-body">
+    <div class="d-flex justify-content-between flex-wrap gap-2">
+      <div>
+        <h2 class="h5 mb-1">{{ r.student.first_name }} {{ r.student.last_name }}</h2>
+        <div class="text-muted small">{{ r.student.email }}</div>
+      </div>
+      <span class="badge text-bg-{{ colors[r.application.status] }} align-self-start">{{ r.application.status.replace('_', ' ')|capitalize }}</span>
+    </div>
+    <p class="small mt-2 mb-2">
+      Direction: {{ r.student.direction or '—' }} · Format: {{ r.student.work_format or '—' }} · City: {{ r.student.city or '—' }}
+    </p>
+    <p class="mb-2">{% for s in r.skills %}<span class="badge text-bg-light border">{{ s }}</span> {% endfor %}</p>
+    {% if r.application.message %}<p class="mb-2"><strong>Message:</strong> {{ r.application.message }}</p>{% endif %}
+    {% if r.application.status != 'withdrawn' %}
+    <form method="post" action="/employer/application/{{ r.application.id }}/status" class="d-flex gap-2">
+      <select class="form-select form-select-sm w-auto" name="status">
+        {% for s in statuses %}<option value="{{ s }}" {% if s == r.application.status %}selected{% endif %}>{{ s.replace('_', ' ')|capitalize }}</option>{% endfor %}
+      </select>
+      <button class="btn btn-primary btn-sm" type="submit">Update status</button>
+    </form>
+    {% else %}<p class="small text-muted mb-0">The candidate withdrew this application.</p>{% endif %}
+  </div>
+</div>
+{% endfor %}
+{% endblock %}

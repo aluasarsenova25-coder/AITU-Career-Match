@@ -121,8 +121,14 @@ def login_submit(request: Request, email: str = Form(...), password: str = Form(
         if not user or not check_password(password, user.password_hash):
             return templates.TemplateResponse(request, "login.html", {
                 "error": "Invalid email or password.", "email": email})
+        if user.is_blocked:
+            return templates.TemplateResponse(request, "login.html", {
+                "error": "This account is blocked.", "email": email})
         request.session["user_id"] = user.id
         request.session["user_name"] = user.first_name
+        request.session["role"] = user.role
+        if user.role == "employer":
+            return RedirectResponse("/employer", status_code=303)
         return RedirectResponse("/", status_code=303)
     finally:
         db.close()
@@ -322,3 +328,14 @@ def withdraw_application(request: Request, application_id: int):
     finally:
         db.close()
     return RedirectResponse("/applications", status_code=303)
+
+from employer import router as employer_router
+from database import expire_old_vacancies
+
+app.include_router(employer_router)
+
+
+@app.middleware("http")
+async def expire_middleware(request: Request, call_next):
+    expire_old_vacancies()  # published vacancies past their deadline become "expired"
+    return await call_next(request)

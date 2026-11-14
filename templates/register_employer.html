@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Employer sign up{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <h1 class="h3 mb-3">Create employer account</h1>
+    {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+    <form method="post" action="/register/employer" class="card card-body shadow-sm">
+      <input class="form-control mb-2" name="company_name" placeholder="Company name" value="{{ company_name or '' }}" required>
+      <div class="row g-2 mb-2">
+        <div class="col"><input class="form-control" name="first_name" placeholder="Contact first name" value="{{ first_name or '' }}" required></div>
+        <div class="col"><input class="form-control" name="last_name" placeholder="Contact last name" value="{{ last_name or '' }}" required></div>
+      </div>
+      <input class="form-control mb-2" type="email" name="email" placeholder="Work email" value="{{ email or '' }}" required>
+      <input class="form-control mb-2" type="password" name="password" placeholder="Password (min. 8 characters)" required>
+      <input class="form-control mb-2" type="password" name="password2" placeholder="Confirm password" required>
+      <div class="form-check mb-3">
+        <input class="form-check-input" type="checkbox" name="consent" id="consent" value="1">
+        <label class="form-check-label" for="consent">I agree to the data processing rules</label>
+      </div>
+      <button class="btn btn-primary" type="submit">Create account</button>
+      <p class="small text-muted mt-3 mb-0">Your company will be reviewed by an administrator before you can publish vacancies.</p>
+    </form>
+  </div>
+</div>
+{% endblock %}

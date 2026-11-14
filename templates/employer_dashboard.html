@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}My vacancies{% endblock %}
+{% block content %}
+{% set messages = {
+  "saved": "Vacancy saved.",
+  "submitted": "Vacancy sent for review.",
+  "not_verified": "Your company must be verified by an administrator before you can publish.",
+  "no_required": "Add at least one required skill before submitting.",
+  "closed": "Vacancy closed.",
+  "locked": "Closed vacancies cannot be edited.",
+  "company_saved": "Company profile saved."} %}
+{% set colors = {"draft": "secondary", "pending": "warning", "published": "success",
+                 "rejected": "danger", "closed": "dark", "expired": "secondary"} %}
+
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+  <div>
+    <h1 class="h3 mb-1">{{ employer.company_name }}</h1>
+    {% if employer.verified %}<span class="badge text-bg-success">Verified company</span>
+    {% else %}<span class="badge text-bg-warning">Not verified yet</span>{% endif %}
+  </div>
+  <a class="btn btn-primary" href="/employer/vacancy/new">+ New vacancy</a>
+</div>
+
+{% if msg in messages %}<div class="alert alert-info">{{ messages[msg] }}</div>{% endif %}
+{% if not employer.verified %}
+  <div class="alert alert-warning">You can create profiles and drafts now. Publishing becomes available after an administrator verifies your company.</div>
+{% endif %}
+{% if not vacancies %}<div class="alert alert-secondary">You have no vacancies yet.</div>{% endif %}
+
+{% for v in vacancies %}
+<div class="card shadow-sm mb-3">
+  <div class="card-body">
+    <div class="d-flex justify-content-between flex-wrap gap-2">
+      <div>
+        <h2 class="h5 mb-1">{{ v.title }}</h2>
+        <div class="text-muted small">{{ v.direction }} · {{ v.level }} · {{ v.work_format }}{% if v.deadline %} · deadline {{ v.deadline }}{% endif %}</div>
+        {% if v.status == 'rejected' and v.rejection_reason %}
+          <div class="small text-danger mt-1">Rejected: {{ v.rejection_reason }}</div>
+        {% endif %}
+      </div>
+      <div><span class="badge text-bg-{{ colors[v.status] }}">{{ v.status|capitalize }}</span></div>
+    </div>
+    <div class="d-flex flex-wrap gap-2 mt-3">
+      {% if v.status != 'closed' %}<a class="btn btn-outline-secondary btn-sm" href="/employer/vacancy/{{ v.id }}/edit">Edit</a>{% endif %}
+      <a class="btn btn-outline-secondary btn-sm" href="/employer/vacancy/{{ v.id }}/applications">Applications ({{ counts[v.id] }})</a>
+      {% if v.status in ['draft', 'rejected'] %}
+        <form method="post" action="/employer/vacancy/{{ v.id }}/submit">
+          <button class="btn btn-primary btn-sm" type="submit">Submit for review</button>
+        </form>
+      {% endif %}
+      {% if v.status != 'closed' %}
+        <form method="post" action="/employer/vacancy/{{ v.id }}/close">
+          <button class="btn btn-outline-danger btn-sm" type="submit">Close</button>
+        </form>
+      {% endif %}
+    </div>
+    {% if v.status == 'published' %}<p class="small text-muted mt-2 mb-0">Editing a published vacancy sends it for review again.</p>{% endif %}
+  </div>
+</div>
+{% endfor %}
+{% endblock %}

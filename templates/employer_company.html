@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Company profile{% endblock %}
+{% block content %}
+<a href="/employer" class="small">← Back to my vacancies</a>
+<h1 class="h3 mt-2 mb-3">Company profile</h1>
+{% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+<form method="post" action="/employer/company" class="card card-body shadow-sm" style="max-width: 640px;">
+  <label class="form-label">Company name</label>
+  <input class="form-control mb-3" name="company_name" value="{{ employer.company_name }}" required>
+  <label class="form-label">Contact person</label>
+  <input class="form-control mb-3" name="contact_name" value="{{ employer.contact_name or '' }}">
+  <label class="form-label">Website</label>
+  <input class="form-control mb-3" name="website" value="{{ employer.website or '' }}" placeholder="https://example.com">
+  <label class="form-label">About the company</label>
+  <textarea class="form-control mb-3" name="description" rows="4">{{ employer.description or '' }}</textarea>
+  <button class="btn btn-primary" type="submit">Save</button>
+</form>
+{% endblock %}

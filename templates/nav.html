@@ -1,14 +1,24 @@
 <nav class="navbar navbar-dark bg-primary mb-4">
   <div class="container">
     <a class="navbar-brand fw-bold" href="/">AITU Career Match</a>
-    <div class="d-flex flex-wrap gap-2">
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+      {% set role = request.session.get('role') %}
       {% if request.session.get('user_id') %}
-        <a class="btn btn-light btn-sm" href="/recommendations">Recommendations</a>
-        <a class="btn btn-outline-light btn-sm" href="/favorites">Saved</a>
-        <a class="btn btn-outline-light btn-sm" href="/applications">Applications</a>
-        <a class="btn btn-outline-light btn-sm" href="/profile">{{ request.session.get('user_name') }}</a>
+        {% if role == 'employer' %}
+          <a class="btn btn-light btn-sm" href="/employer">My vacancies</a>
+          <a class="btn btn-outline-light btn-sm" href="/employer/company">Company</a>
+          <span class="navbar-text text-white small">{{ request.session.get('user_name') }}</span>
+        {% elif role == 'admin' %}
+          <span class="navbar-text text-white small">Admin: {{ request.session.get('user_name') }}</span>
+        {% else %}
+          <a class="btn btn-light btn-sm" href="/recommendations">Recommendations</a>
+          <a class="btn btn-outline-light btn-sm" href="/favorites">Saved</a>
+          <a class="btn btn-outline-light btn-sm" href="/applications">Applications</a>
+          <a class="btn btn-outline-light btn-sm" href="/profile">{{ request.session.get('user_name') }}</a>
+        {% endif %}
         <a class="btn btn-light btn-sm" href="/logout">Log out</a>
       {% else %}
+        <a class="btn btn-outline-light btn-sm" href="/register/employer">For employers</a>
         <a class="btn btn-outline-light btn-sm" href="/login">Log in</a>
         <a class="btn btn-light btn-sm" href="/register">Sign up</a>
       {% endif %}
