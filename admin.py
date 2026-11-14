@@ -137,3 +137,84 @@ def reject_vacancy(request: Request, vacancy_id: int, reason: str = Form("")):
         return RedirectResponse("/admin/vacancies?msg=rejected", status_code=303)
     finally:
         db.close()
+
+
+def target_label(db, target_type, target_id):
+    """Human-readable name of the object an action was applied to."""
+    if target_type == "vacancy":
+        item = db.get(Vacancy, target_id)
+        return item.title if item else f"vacancy #{target_id}"
+    if target_type == "company":
+        item = db.get(EmployerProfile, target_id)
+        return item.company_name if item else f"company #{target_id}"
+    if target_type == "user":
+        item = db.get(User, target_id)
+        return item.email if item else f"user #{target_id}"
+    return f"{target_type} #{target_id}"
+
+
+@router.get("/admin/users")
+def admin_users(request: Request, msg: str = ""):
+    db = SessionLocal()
+    try:
+        admin = get_admin(request, db)
+        if not admin:
+            return RedirectResponse("/login", status_code=303)
+        users = db.query(User).filter(User.role != "admin").order_by(User.id.desc()).all()
+        return templates.TemplateResponse(request, "admin_users.html",
+                                          {"users": users, "msg": msg})
+    finally:
+        db.close()
+
+
+def set_user_blocked(request, user_id, value, reason=""):
+    db = SessionLocal()
+    try:
+        admin = get_admin(request, db)
+        if not admin:
+            return RedirectResponse("/login", status_code=303)
+        user = db.get(User, user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        if user.role == "admin":  # administrators cannot be blocked here
+            return RedirectResponse("/admin/users", status_code=303)
+        if user.is_blocked != value:
+            user.is_blocked = value
+            log_action(db, admin, "block_user" if value else "unblock_user",
+                       "user", user.id, reason.strip()[:1000] or None)
+            db.commit()
+        return RedirectResponse("/admin/users?msg=" + ("blocked" if value else "unblocked"),
+                                status_code=303)
+    finally:
+        db.close()
+
+
+@router.post("/admin/user/{user_id}/block")
+def block_user(request: Request, user_id: int, reason: str = Form("")):
+    return set_user_blocked(request, user_id, True, reason)
+
+
+@router.post("/admin/user/{user_id}/unblock")
+def unblock_user(request: Request, user_id: int):
+    return set_user_blocked(request, user_id, False)
+
+
+@router.get("/admin/log")
+def admin_log(request: Request):
+    db = SessionLocal()
+    try:
+        admin = get_admin(request, db)
+        if not admin:
+            return RedirectResponse("/login", status_code=303)
+        entries = db.query(ModerationLog).order_by(ModerationLog.id.desc()).limit(200).all()
+        rows = []
+        for e in entries:
+            actor = db.get(User, e.admin_id)
+            rows.append({
+                "entry": e,
+                "admin": actor.email if actor else "—",
+                "target": target_label(db, e.target_type, e.target_id),
+            })
+        return templates.TemplateResponse(request, "admin_log.html", {"rows": rows})
+    finally:
+        db.close()
