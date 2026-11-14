@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Admin: skills{% endblock %}
+{% block content %}
+{% set messages = {
+  "added": "Skill added.",
+  "renamed": "Skill renamed.",
+  "alias_added": "Synonym added.",
+  "alias_deleted": "Synonym removed.",
+  "deleted": "Skill deleted.",
+  "exists": "A skill or synonym with this name already exists.",
+  "empty": "The name cannot be empty.",
+  "in_use": "This skill is used in vacancies or profiles and cannot be deleted."} %}
+
+<h1 class="h3 mb-1">Skills dictionary</h1>
+<p class="text-muted">All skills come from this list. A synonym (for example Postgres for PostgreSQL) is linked to one skill, so it is counted once. A skill that is in use cannot be deleted.</p>
+
+{% if msg in messages %}<div class="alert alert-info">{{ messages[msg] }}</div>{% endif %}
+
+<form method="post" action="/admin/skills/add" class="d-flex gap-2 mb-4" style="max-width: 480px;">
+  <input class="form-control" name="name" placeholder="New skill name" maxlength="60" required>
+  <button class="btn btn-primary" type="submit">Add skill</button>
+</form>
+
+{% for r in rows %}
+<div class="card shadow-sm mb-2">
+  <div class="card-body">
+    <div class="d-flex justify-content-between flex-wrap gap-2">
+      <form method="post" action="/admin/skills/{{ r.skill.id }}/rename" class="d-flex gap-2">
+        <input class="form-control form-control-sm" name="name" value="{{ r.skill.name }}" maxlength="60" required>
+        <button class="btn btn-outline-secondary btn-sm" type="submit">Rename</button>
+      </form>
+      <div class="small text-muted align-self-center">
+        vacancies: {{ r.vacancies }} · students: {{ r.students }} · projects: {{ r.projects }}
+      </div>
+    </div>
+
+    <div class="mt-2 d-flex flex-wrap gap-2 align-items-center">
+      <span class="small text-muted">Synonyms:</span>
+      {% for a in r.aliases %}
+        <form method="post" action="/admin/alias/{{ a.id }}/delete" class="d-inline">
+          <span class="badge text-bg-light border">{{ a.alias }}
+            <button class="btn btn-link btn-sm p-0 ms-1 text-danger" type="submit" aria-label="Remove synonym {{ a.alias }}">✕</button>
+          </span>
+        </form>
+      {% else %}
+        <span class="small text-muted">none</span>
+      {% endfor %}
+    </div>
+
+    <div class="d-flex flex-wrap gap-2 mt-2">
+      <form method="post" action="/admin/skills/{{ r.skill.id }}/alias" class="d-flex gap-2">
+        <input class="form-control form-control-sm" name="alias" placeholder="Add synonym" maxlength="60" required>
+        <button class="btn btn-outline-primary btn-sm" type="submit">Add</button>
+      </form>
+      {% if r.vacancies + r.students + r.projects == 0 %}
+        <form method="post" action="/admin/skills/{{ r.skill.id }}/delete">
+          <button class="btn btn-outline-danger btn-sm" type="submit">Delete skill</button>
+        </form>
+      {% else %}
+        <button class="btn btn-outline-secondary btn-sm" type="button" disabled>In use</button>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endfor %}
+{% endblock %}

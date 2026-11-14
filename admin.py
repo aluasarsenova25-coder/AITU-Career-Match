@@ -218,3 +218,161 @@ def admin_log(request: Request):
         return templates.TemplateResponse(request, "admin_log.html", {"rows": rows})
     finally:
         db.close()
+
+from database import ProjectSkill, Skill, SkillAlias, StudentSkill, VacancySkill
+
+
+def clean_name(value):
+    return " ".join((value or "").split())[:60]
+
+
+def name_taken(db, name, ignore_skill_id=None):
+    """True if a skill name or a synonym with this text already exists (case-insensitive)."""
+    lowered = name.lower()
+    for s in db.query(Skill):
+        if s.id != ignore_skill_id and s.name.lower() == lowered:
+            return True
+    for a in db.query(SkillAlias):
+        if a.alias.lower() == lowered:
+            return True
+    return False
+
+
+def skills_redirect(msg):
+    return RedirectResponse(f"/admin/skills?msg={msg}", status_code=303)
+
+
+@router.get("/admin/skills")
+def admin_skills(request: Request, msg: str = ""):
+    db = SessionLocal()
+    try:
+        admin = get_admin(request, db)
+        if not admin:
+            return RedirectResponse("/login", status_code=303)
+        rows = []
+        for s in db.query(Skill).order_by(Skill.name).all():
+            rows.append({
+                "skill": s, "aliases": s.aliases,
+                "vacancies": db.query(VacancySkill).filter_by(skill_id=s.id).count(),
+                "students": db.query(StudentSkill).filter_by(skill_id=s.id).count(),
+                "projects": db.query(ProjectSkill).filter_by(skill_id=s.id).count(),
+            })
+        return templates.TemplateResponse(request, "admin_skills.html",
+                                          {"rows": rows, "msg": msg})
+    finally:
+        db.close()
+
+
+@router.post("/admin/skills/add")
+def add_skill(request: Request, name: str = Form("")):
+    db = SessionLocal()
+    try:
+        admin = get_admin(request, db)
+        if not admin:
+            return RedirectResponse("/login", status_code=303)
+        name = clean_name(name)
+        if not name:
+            return skills_redirect("empty")
+        if name_taken(db, name):
+            return skills_redirect("exists")
+        skill = Skill(name=name)
+        db.add(skill)
+        db.flush()
+        log_action(db, admin, "add_skill", "skill", skill.id, name)
+        db.commit()
+        return skills_redirect("added")
+    finally:
+        db.close()
+
+
+@router.post("/admin/skills/{skill_id}/rename")
+def rename_skill(request: Request, skill_id: int, name: str = Form("")):
+    db = SessionLocal()
+    try:
+        admin = get_admin(request, db)
+        if not admin:
+            return RedirectResponse("/login", status_code=303)
+        skill = db.get(Skill, skill_id)
+        if not skill:
+            raise HTTPException(status_code=404, detail="Skill not found")
+        name = clean_name(name)
+        if not name:
+            return skills_redirect("empty")
+        if name == skill.name:
+            return skills_redirect("renamed")
+        if name_taken(db, name, ignore_skill_id=skill.id):
+            return skills_redirect("exists")
+        old = skill.name
+        skill.name = name
+        log_action(db, admin, "rename_skill", "skill", skill.id, f"{old} -> {name}")
+        db.commit()
+        return skills_redirect("renamed")
+    finally:
+        db.close()
+
+
+@router.post("/admin/skills/{skill_id}/alias")
+def add_alias(request: Request, skill_id: int, alias: str = Form("")):
+    db = SessionLocal()
+    try:
+        admin = get_admin(request, db)
+        if not admin:
+            return RedirectResponse("/login", status_code=303)
+        skill = db.get(Skill, skill_id)
+        if not skill:
+            raise HTTPException(status_code=404, detail="Skill not found")
+        alias = clean_name(alias)
+        if not alias:
+            return skills_redirect("empty")
+        if name_taken(db, alias):
+            return skills_redirect("exists")
+        db.add(SkillAlias(skill_id=skill.id, alias=alias))
+        log_action(db, admin, "add_alias", "skill", skill.id, f"{skill.name}: {alias}")
+        db.commit()
+        return skills_redirect("alias_added")
+    finally:
+        db.close()
+
+
+@router.post("/admin/alias/{alias_id}/delete")
+def delete_alias(request: Request, alias_id: int):
+    db = SessionLocal()
+    try:
+        admin = get_admin(request, db)
+        if not admin:
+            return RedirectResponse("/login", status_code=303)
+        alias = db.get(SkillAlias, alias_id)
+        if not alias:
+            raise HTTPException(status_code=404, detail="Synonym not found")
+        log_action(db, admin, "delete_alias", "skill", alias.skill_id,
+                   f"{alias.skill.name}: {alias.alias}")
+        db.delete(alias)
+        db.commit()
+        return skills_redirect("alias_deleted")
+    finally:
+        db.close()
+
+
+@router.post("/admin/skills/{skill_id}/delete")
+def delete_skill(request: Request, skill_id: int):
+    db = SessionLocal()
+    try:
+        admin = get_admin(request, db)
+        if not admin:
+            return RedirectResponse("/login", status_code=303)
+        skill = db.get(Skill, skill_id)
+        if not skill:
+            raise HTTPException(status_code=404, detail="Skill not found")
+        in_use = (db.query(VacancySkill).filter_by(skill_id=skill.id).count()
+                  + db.query(StudentSkill).filter_by(skill_id=skill.id).count()
+                  + db.query(ProjectSkill).filter_by(skill_id=skill.id).count())
+        if in_use:
+            return skills_redirect("in_use")
+        log_action(db, admin, "delete_skill", "skill", skill.id, skill.name)
+        for a in list(skill.aliases):
+            db.delete(a)
+        db.delete(skill)
+        db.commit()
+        return skills_redirect("deleted")
+    finally:
+        db.close()
