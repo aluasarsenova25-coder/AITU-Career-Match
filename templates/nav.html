@@ -3,6 +3,7 @@
     <a class="navbar-brand fw-bold" href="/">AITU Career Match</a>
     <div class="d-flex gap-2">
       {% if request.session.get('user_id') %}
+        <a class="btn btn-light btn-sm" href="/recommendations">Recommendations</a>
         <a class="btn btn-outline-light btn-sm" href="/profile">{{ request.session.get('user_name') }}</a>
         <a class="btn btn-light btn-sm" href="/logout">Log out</a>
       {% else %}

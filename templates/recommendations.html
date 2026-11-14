@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Recommendations{% endblock %}
+{% block content %}
+<h1 class="h3 mb-1">Recommended for you</h1>
+<p class="text-muted">The match score shows how well your profile fits the requirements. It is not a probability of being hired.</p>
+
+{% if not ready %}
+  <div class="alert alert-info">
+    Add at least one skill and one career direction in your <a href="/profile">profile</a> to get recommendations.
+  </div>
+{% else %}
+  <div class="row">
+    <div class="col-lg-8">
+      {% for r in results %}
+      <div class="card shadow-sm mb-3">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <h2 class="h5 mb-1">{{ r.vacancy.title }}
+                {% if r.vacancy.is_demo %}<span class="badge text-bg-secondary">Demo</span>{% endif %}
+              </h2>
+              <p class="text-muted mb-2">{{ r.vacancy.company }} · {{ r.vacancy.city }} · {{ r.vacancy.work_format }} · {{ r.vacancy.level }}</p>
+            </div>
+            <div class="text-end">
+              <div class="fs-4 fw-bold">{{ r.score }}</div>
+              <div class="small text-muted">match score</div>
+            </div>
+          </div>
+          <div class="progress mb-2" role="progressbar" aria-label="Match score" aria-valuenow="{{ r.score }}" aria-valuemin="0" aria-valuemax="100">
+            <div class="progress-bar" style="width: {{ r.score }}%"></div>
+          </div>
+          <p class="mb-2">{{ r.explanation }}</p>
+          <div>
+            {% for s in r.matched_req %}<span class="badge text-bg-success">✓ {{ s }}</span> {% endfor %}
+            {% for s in r.missing_req %}<span class="badge text-bg-warning">✗ {{ s }}</span> {% endfor %}
+            {% for s in r.matched_opt %}<span class="badge text-bg-light border">✓ {{ s }}</span> {% endfor %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h2 class="h5">What to learn</h2>
+          <p class="small text-muted">Skills missing from your profile in active {{ user.direction }} vacancies. Learning a skill does not guarantee a job.</p>
+          {% if learn %}
+            <ul class="list-group list-group-flush">
+              {% for name, count in learn %}
+                <li class="list-group-item d-flex justify-content-between">
+                  {{ name }} <span class="badge text-bg-secondary">{{ count }} vacancies</span>
+                </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <p class="mb-0">No missing skills found for this direction.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}

@@ -177,3 +177,20 @@ def profile_save(request: Request,
         return render_profile(request, db, user, saved=True)
     finally:
         db.close()
+
+from recommender import get_recommendations
+
+
+@app.get("/recommendations")
+def recommendations_page(request: Request):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=303)
+    db = SessionLocal()
+    try:
+        user = db.get(User, user_id)
+        data = get_recommendations(db, user)
+        return templates.TemplateResponse(request, "recommendations.html",
+                                          {"user": user, **data})
+    finally:
+        db.close()

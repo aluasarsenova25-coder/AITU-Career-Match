@@ -23,6 +23,8 @@ class User(Base):
     direction = Column(String)
     work_format = Column(String)
     city = Column(String)
+    student_skills = relationship("StudentSkill")
+
 
 
 class StudentSkill(Base):
