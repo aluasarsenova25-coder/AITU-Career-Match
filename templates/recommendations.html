@@ -16,8 +16,8 @@
         <div class="card-body">
           <div class="d-flex justify-content-between align-items-start">
             <div>
-              <h2 class="h5 mb-1">{{ r.vacancy.title }}
-                {% if r.vacancy.is_demo %}<span class="badge text-bg-secondary">Demo</span>{% endif %}
+              <h2 class="h5 mb-1"><a class="text-decoration-none text-dark" href="/vacancy/{{ r.vacancy.id }}">{{ r.vacancy.title }}</a>
+                {% if r.vacancy.is_demo %}<span class="badge text-bg-secondary">{{ count }} {{ 'vacancy' if count == 1 else 'vacancies' }}</span>{% endif %}
               </h2>
               <p class="text-muted mb-2">{{ r.vacancy.company }} · {{ r.vacancy.city }} · {{ r.vacancy.work_format }} · {{ r.vacancy.level }}</p>
             </div>

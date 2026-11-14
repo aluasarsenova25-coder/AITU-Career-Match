@@ -194,3 +194,131 @@ def recommendations_page(request: Request):
                                           {"user": user, **data})
     finally:
         db.close()
+
+from fastapi import HTTPException
+from database import SavedVacancy, Application
+
+ACTIVE_STATUSES = ("sent", "under_review", "interview")
+
+
+def safe_back(url: str) -> str:
+    return url if url.startswith("/") and not url.startswith("//") else "/"
+
+
+@app.get("/vacancy/{vacancy_id}")
+def vacancy_page(request: Request, vacancy_id: int, error: str = ""):
+    db = SessionLocal()
+    try:
+        vacancy = db.get(Vacancy, vacancy_id)
+        if not vacancy or vacancy.status != "published":
+            raise HTTPException(status_code=404, detail="Vacancy not found")
+        user, my_skills, saved, application = None, set(), False, None
+        user_id = request.session.get("user_id")
+        if user_id:
+            user = db.get(User, user_id)
+            my_skills = {ss.skill.name for ss in user.student_skills}
+            saved = db.query(SavedVacancy).filter_by(
+                user_id=user_id, vacancy_id=vacancy_id).first() is not None
+            application = db.query(Application).filter(
+                Application.user_id == user_id,
+                Application.vacancy_id == vacancy_id,
+                Application.status.in_(ACTIVE_STATUSES)).first()
+        return templates.TemplateResponse(request, "vacancy.html", {
+            "vacancy": vacancy, "user": user, "my_skills": my_skills,
+            "saved": saved, "application": application, "error": error})
+    finally:
+        db.close()
+
+
+@app.post("/vacancy/{vacancy_id}/save")
+def toggle_save(request: Request, vacancy_id: int, back: str = Form("/favorites")):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=303)
+    db = SessionLocal()
+    try:
+        row = db.query(SavedVacancy).filter_by(
+            user_id=user_id, vacancy_id=vacancy_id).first()
+        if row:
+            db.delete(row)
+        elif db.get(Vacancy, vacancy_id):
+            db.add(SavedVacancy(user_id=user_id, vacancy_id=vacancy_id))
+        db.commit()
+    finally:
+        db.close()
+    return RedirectResponse(safe_back(back), status_code=303)
+
+
+@app.post("/vacancy/{vacancy_id}/apply")
+def apply_to_vacancy(request: Request, vacancy_id: int,
+                     message: str = Form(""), consent: str = Form(None)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=303)
+    if not consent:
+        return RedirectResponse(f"/vacancy/{vacancy_id}?error=consent", status_code=303)
+    db = SessionLocal()
+    try:
+        vacancy = db.get(Vacancy, vacancy_id)
+        if not vacancy or vacancy.status != "published":
+            raise HTTPException(status_code=404, detail="Vacancy not found")
+        existing = db.query(Application).filter(
+            Application.user_id == user_id,
+            Application.vacancy_id == vacancy_id,
+            Application.status.in_(ACTIVE_STATUSES)).first()
+        if not existing:  # a repeated click does not create a duplicate
+            db.add(Application(user_id=user_id, vacancy_id=vacancy_id,
+                               status="sent", message=message.strip()[:1000]))
+            db.commit()
+    finally:
+        db.close()
+    return RedirectResponse(f"/vacancy/{vacancy_id}", status_code=303)
+
+
+@app.get("/favorites")
+def favorites_page(request: Request):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=303)
+    db = SessionLocal()
+    try:
+        rows = db.query(SavedVacancy).filter_by(user_id=user_id).all()
+        vacancies = [r.vacancy for r in rows
+                     if r.vacancy and r.vacancy.status == "published"]
+        return templates.TemplateResponse(request, "favorites.html",
+                                          {"vacancies": vacancies})
+    finally:
+        db.close()
+
+
+@app.get("/applications")
+def applications_page(request: Request):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=303)
+    db = SessionLocal()
+    try:
+        rows = db.query(Application).filter_by(user_id=user_id) \
+                 .order_by(Application.id.desc()).all()
+        return templates.TemplateResponse(request, "applications.html", {
+            "applications": rows, "active": ACTIVE_STATUSES})
+    finally:
+        db.close()
+
+
+@app.post("/applications/{application_id}/withdraw")
+def withdraw_application(request: Request, application_id: int):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse("/login", status_code=303)
+    db = SessionLocal()
+    try:
+        row = db.get(Application, application_id)
+        if not row or row.user_id != user_id:
+            raise HTTPException(status_code=404, detail="Application not found")
+        if row.status in ACTIVE_STATUSES:
+            row.status = "withdrawn"
+            db.commit()
+    finally:
+        db.close()
+    return RedirectResponse("/applications", status_code=303)

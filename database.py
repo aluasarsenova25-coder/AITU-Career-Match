@@ -67,6 +67,7 @@ class SavedVacancy(Base):
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     vacancy_id = Column(Integer, ForeignKey("vacancies.id"))
+    vacancy = relationship("Vacancy")
 
 
 class Application(Base):
@@ -76,3 +77,4 @@ class Application(Base):
     vacancy_id = Column(Integer, ForeignKey("vacancies.id"))
     status = Column(String, default="sent")
     message = Column(Text)
+    vacancy = relationship("Vacancy")

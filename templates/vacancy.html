@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}{{ vacancy.title }}{% endblock %}
+{% block content %}
+<a href="/" class="small">← Back to catalog</a>
+<div class="row mt-2">
+  <div class="col-lg-8">
+    <div class="card shadow-sm mb-3">
+      <div class="card-body">
+        <h1 class="h3">{{ vacancy.title }}
+          {% if vacancy.is_demo %}<span class="badge text-bg-secondary">Demo</span>{% endif %}
+        </h1>
+        <p class="text-muted">{{ vacancy.company }} · {{ vacancy.city }} · {{ vacancy.work_format }} · {{ vacancy.level }}</p>
+        <p>
+          <span class="badge text-bg-info">{{ vacancy.direction }}</span>
+          {% if vacancy.paid %}<span class="badge text-bg-light border">Paid</span>
+          {% else %}<span class="badge text-bg-warning">Unpaid</span>{% endif %}
+        </p>
+        <p>{{ vacancy.description }}</p>
+
+        <h2 class="h6">Required skills</h2>
+        <p>
+          {% for s in vacancy.skills if s.is_required %}
+            {% if user %}
+              {% if s.skill.name in my_skills %}<span class="badge text-bg-success">✓ {{ s.skill.name }}</span>
+              {% else %}<span class="badge text-bg-warning">✗ {{ s.skill.name }}</span>{% endif %}
+            {% else %}<span class="badge text-bg-dark">{{ s.skill.name }}</span>{% endif %}
+          {% endfor %}
+        </p>
+        <h2 class="h6">Nice to have</h2>
+        <p>
+          {% for s in vacancy.skills if not s.is_required %}
+            {% if user and s.skill.name in my_skills %}<span class="badge text-bg-success">✓ {{ s.skill.name }}</span>
+            {% else %}<span class="badge text-bg-light border">{{ s.skill.name }}</span>{% endif %}
+          {% endfor %}
+        </p>
+        {% if user %}<p class="small text-muted mb-0">A missing required skill lowers your match score but does not block your application.</p>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        {% if not user %}
+          <p><a href="/login">Log in</a> or <a href="/register">sign up</a> to save this vacancy or apply.</p>
+        {% else %}
+          <form method="post" action="/vacancy/{{ vacancy.id }}/save" class="mb-3">
+            <input type="hidden" name="back" value="/vacancy/{{ vacancy.id }}">
+            <button class="btn btn-outline-primary w-100" type="submit">
+              {% if saved %}★ Remove from saved{% else %}☆ Save vacancy{% endif %}
+            </button>
+          </form>
+
+          {% if application %}
+            <div class="alert alert-success mb-2">
+              You applied. Status: <strong>{{ application.status.replace('_', ' ')|capitalize }}</strong>
+            </div>
+            <a href="/applications" class="btn btn-outline-secondary w-100">My applications</a>
+          {% else %}
+            {% if error == 'consent' %}
+              <div class="alert alert-danger">Please confirm the data transfer to apply.</div>
+            {% endif %}
+            {% if vacancy.is_demo %}
+              <div class="alert alert-warning small">Demo vacancy: the application is stored only in this demo and is not sent to a real employer.</div>
+            {% endif %}
+            <form method="post" action="/vacancy/{{ vacancy.id }}/apply">
+              <p class="small mb-2"><strong>Data sent with your application:</strong>
+                name, email, career direction, work format, city and skills from your profile.</p>
+              <textarea class="form-control mb-2" name="message" rows="3" maxlength="1000"
+                        placeholder="Cover message (optional)"></textarea>
+              <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" name="consent" id="consent" value="1" required>
+                <label class="form-check-label small" for="consent">I confirm sharing my profile data with the employer</label>
+              </div>
+              <button class="btn btn-primary w-100" type="submit">Apply</button>
+            </form>
+          {% endif %}
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

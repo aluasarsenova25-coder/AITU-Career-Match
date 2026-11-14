@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Saved vacancies{% endblock %}
+{% block content %}
+<h1 class="h3 mb-3">Saved vacancies</h1>
+{% if not vacancies %}
+  <div class="alert alert-info">You have no saved vacancies yet. <a href="/">Browse the catalog</a>.</div>
+{% endif %}
+<div class="row g-3">
+  {% for v in vacancies %}
+  <div class="col-md-6">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <h2 class="h5"><a class="text-decoration-none" href="/vacancy/{{ v.id }}">{{ v.title }}</a>
+          {% if v.is_demo %}<span class="badge text-bg-secondary">Demo</span>{% endif %}
+        </h2>
+        <p class="text-muted mb-2">{{ v.company }} · {{ v.city }} · {{ v.work_format }} · {{ v.level }}</p>
+        <form method="post" action="/vacancy/{{ v.id }}/save">
+          <input type="hidden" name="back" value="/favorites">
+          <button class="btn btn-outline-danger btn-sm" type="submit">Remove from saved</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

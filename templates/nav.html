@@ -1,9 +1,11 @@
 <nav class="navbar navbar-dark bg-primary mb-4">
   <div class="container">
     <a class="navbar-brand fw-bold" href="/">AITU Career Match</a>
-    <div class="d-flex gap-2">
+    <div class="d-flex flex-wrap gap-2">
       {% if request.session.get('user_id') %}
         <a class="btn btn-light btn-sm" href="/recommendations">Recommendations</a>
+        <a class="btn btn-outline-light btn-sm" href="/favorites">Saved</a>
+        <a class="btn btn-outline-light btn-sm" href="/applications">Applications</a>
         <a class="btn btn-outline-light btn-sm" href="/profile">{{ request.session.get('user_name') }}</a>
         <a class="btn btn-light btn-sm" href="/logout">Log out</a>
       {% else %}
