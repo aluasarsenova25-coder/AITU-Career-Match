@@ -6,6 +6,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from database import EmployerProfile, ModerationLog, SessionLocal, User, Vacancy
+from database import Direction
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -374,5 +375,113 @@ def delete_skill(request: Request, skill_id: int):
         db.delete(skill)
         db.commit()
         return skills_redirect("deleted")
+    finally:
+        db.close()
+
+    from database import Direction
+
+
+def directions_redirect(msg):
+    return RedirectResponse(f"/admin/directions?msg={msg}", status_code=303)
+
+
+def direction_taken(db, name, ignore_id=None):
+    lowered = name.lower()
+    return any(d.id != ignore_id and d.name.lower() == lowered
+               for d in db.query(Direction))
+
+
+@router.get("/admin/directions")
+def admin_directions(request: Request, msg: str = ""):
+    db = SessionLocal()
+    try:
+        admin = get_admin(request, db)
+        if not admin:
+            return RedirectResponse("/login", status_code=303)
+        rows = []
+        for d in db.query(Direction).order_by(Direction.id).all():
+            rows.append({
+                "direction": d,
+                "vacancies": db.query(Vacancy).filter_by(direction=d.name).count(),
+                "students": db.query(User).filter_by(direction=d.name).count(),
+            })
+        return templates.TemplateResponse(request, "admin_directions.html",
+                                          {"rows": rows, "msg": msg})
+    finally:
+        db.close()
+
+
+@router.post("/admin/directions/add")
+def add_direction(request: Request, name: str = Form("")):
+    db = SessionLocal()
+    try:
+        admin = get_admin(request, db)
+        if not admin:
+            return RedirectResponse("/login", status_code=303)
+        name = clean_name(name)
+        if not name:
+            return directions_redirect("empty")
+        if direction_taken(db, name):
+            return directions_redirect("exists")
+        direction = Direction(name=name)
+        db.add(direction)
+        db.flush()
+        log_action(db, admin, "add_direction", "direction", direction.id, name)
+        db.commit()
+        return directions_redirect("added")
+    finally:
+        db.close()
+
+
+@router.post("/admin/directions/{direction_id}/rename")
+def rename_direction(request: Request, direction_id: int, name: str = Form("")):
+    db = SessionLocal()
+    try:
+        admin = get_admin(request, db)
+        if not admin:
+            return RedirectResponse("/login", status_code=303)
+        direction = db.get(Direction, direction_id)
+        if not direction:
+            raise HTTPException(status_code=404, detail="Direction not found")
+        name = clean_name(name)
+        if not name:
+            return directions_redirect("empty")
+        if name == direction.name:
+            return directions_redirect("renamed")
+        if direction_taken(db, name, ignore_id=direction.id):
+            return directions_redirect("exists")
+        old = direction.name
+        # vacancies and student profiles store the direction name, so they are updated too
+        db.query(Vacancy).filter_by(direction=old).update(
+            {"direction": name}, synchronize_session=False)
+        db.query(User).filter_by(direction=old).update(
+            {"direction": name}, synchronize_session=False)
+        direction.name = name
+        log_action(db, admin, "rename_direction", "direction", direction.id,
+                   f"{old} -> {name}")
+        db.commit()
+        return directions_redirect("renamed")
+    finally:
+        db.close()
+
+
+@router.post("/admin/directions/{direction_id}/delete")
+def delete_direction(request: Request, direction_id: int):
+    db = SessionLocal()
+    try:
+        admin = get_admin(request, db)
+        if not admin:
+            return RedirectResponse("/login", status_code=303)
+        direction = db.get(Direction, direction_id)
+        if not direction:
+            raise HTTPException(status_code=404, detail="Direction not found")
+        in_use = (db.query(Vacancy).filter_by(direction=direction.name).count()
+                  + db.query(User).filter_by(direction=direction.name).count())
+        if in_use:
+            return directions_redirect("in_use")
+        log_action(db, admin, "delete_direction", "direction", direction.id, direction.name)
+        db.delete(direction)
+        db.commit()
+        return directions_redirect("deleted")
     finally:
         db.close()

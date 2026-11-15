@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Admin: directions{% endblock %}
+{% block content %}
+{% set messages = {
+  "added": "Direction added.",
+  "renamed": "Direction renamed. Vacancies and profiles were updated.",
+  "deleted": "Direction deleted.",
+  "exists": "A direction with this name already exists.",
+  "empty": "The name cannot be empty.",
+  "in_use": "This direction is used in vacancies or profiles and cannot be deleted."} %}
+
+<h1 class="h3 mb-1">Career directions</h1>
+<p class="text-muted">The list of directions used in vacancies and student profiles. Renaming a direction updates it everywhere. A direction that is in use cannot be deleted.</p>
+
+{% if msg in messages %}<div class="alert alert-info">{{ messages[msg] }}</div>{% endif %}
+
+<form method="post" action="/admin/directions/add" class="d-flex gap-2 mb-4" style="max-width: 480px;">
+  <input class="form-control" name="name" placeholder="New direction name" maxlength="60" required>
+  <button class="btn btn-primary" type="submit">Add direction</button>
+</form>
+
+{% for r in rows %}
+<div class="card shadow-sm mb-2">
+  <div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <form method="post" action="/admin/directions/{{ r.direction.id }}/rename" class="d-flex gap-2">
+      <input class="form-control form-control-sm" name="name" value="{{ r.direction.name }}" maxlength="60" required>
+      <button class="btn btn-outline-secondary btn-sm" type="submit">Rename</button>
+    </form>
+    <div class="small text-muted">vacancies: {{ r.vacancies }} · students: {{ r.students }}</div>
+    <div>
+      {% if r.vacancies + r.students == 0 %}
+        <form method="post" action="/admin/directions/{{ r.direction.id }}/delete">
+          <button class="btn btn-outline-danger btn-sm" type="submit">Delete</button>
+        </form>
+      {% else %}
+        <button class="btn btn-outline-secondary btn-sm" type="button" disabled>In use</button>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endfor %}
+{% endblock %}
